@@ -75,9 +75,9 @@ def time_test(params, strategy_params, temp_list):
 
     result_path = '{}'.format(opt['path']['results'])
     os.makedirs(result_path, exist_ok=True)
-with torch.enable_grad():  # 启用梯度计算
+    with torch.enable_grad():  # 启用梯度计算
     
-    for _, test_data in enumerate(test_loader):
+      for _, test_data in enumerate(test_loader):
         idx += 1
         diffusion.feed_data(test_data)
         # ---------- 插入对抗攻击 ----------
