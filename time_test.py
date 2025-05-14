@@ -11,7 +11,37 @@ import core.metrics as Metrics
 import data as Data
 import model as Model
 from decimal import Decimal
+import matplotlib.pyplot as plt
 
+def plot_attack_comparison(clean_data, attacked_data, index=0):
+    """
+    绘制原始数据、对抗样本及插补结果对比图
+    """
+    plt.figure(figsize=(15, 5))
+    
+    # 原始数据
+    plt.subplot(131)
+    plt.plot(clean_data['ORI'].iloc[index], label='Original')
+    plt.plot(clean_data['SR'].iloc[index], linestyle='--', label='Clean SR')
+    plt.title("Clean Sample")
+    plt.legend()
+    
+    # 对抗样本
+    plt.subplot(132)
+    plt.plot(attacked_data['ORI'].iloc[index], label='Original')
+    plt.plot(attacked_data['SR'].iloc[index], linestyle='--', label='Adversarial SR')
+    plt.title("Adversarial Sample")
+    plt.legend()
+    
+    # 插补误差对比
+    plt.subplot(133)
+    plt.plot(clean_data['differ'].iloc[index], label='Clean Differ')
+    plt.plot(attacked_data['differ'].iloc[index], label='Attacked Differ')
+    plt.title("Anomaly Score Comparison")
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig('attack_visualization.png')
 
 def time_test(params, strategy_params, temp_list):
     torch.backends.cudnn.enabled = True
