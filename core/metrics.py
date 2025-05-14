@@ -1,7 +1,45 @@
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
+def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha=0.001, iterations=10):
+    """
+    基于PGD生成对抗样本
+    :param model: 扩散模型
+    :param original_sr: 原始低分辨率输入 [B, C, H, W]
+    :param target_ori: 目标高分辨率数据（用于计算损失）
+    :param epsilon: 扰动最大幅度（L∞范数约束）
+    :param alpha: 单步更新步长
+    :param iterations: 迭代次数
+    :return: 对抗样本
+    """
+    adversarial_sr = original_sr.clone().detach()
+    adversarial_sr.requires_grad = True
+    
+    for _ in range(iterations):
+        # 清零梯度
+        if adversarial_sr.grad is not None:
+            adversarial_sr.grad.zero_()
+        
+        # 生成插补结果并计算损失
+        model_output = model.super_resolution(adversarial_sr, continous=False)
+        loss = torch.nn.functional.l1_loss(model_output, target_ori)
+        
+        # 反向传播获取梯度
+        loss.backward()
+        grad = adversarial_sr.grad.data
+        
+        # 更新对抗样本（符号梯度方向）
+        perturbed_data = adversarial_sr + alpha * grad.sign()
+        
+        # 投影到扰动约束范围内
+        delta = torch.clamp(perturbed_data - original_sr, min=-epsilon, max=epsilon)
+        adversarial_sr = torch.clamp(original_sr + delta, 0, 1).detach_()
+        adversarial_sr.requires_grad = True
+    
+    return adversarial_sr.detach()
+    
 
 def squeeze_tensor(tensor):
     return tensor.squeeze().cpu()
