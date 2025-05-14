@@ -44,6 +44,8 @@ def plot_attack_comparison(clean_data, attacked_data, index=0):
     plt.savefig('attack_visualization.png')
 
 def time_test(params, strategy_params, temp_list):
+    # 从 params 中获取 test_loader
+    test_loader = params['test_loader']
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
     opt = params['opt']
@@ -173,8 +175,9 @@ if __name__ == '__main__':
         'logger_test': logger_test,
         'model_epoch': model_epoch,
         'row_num': test_set.row_num,
-        'col_num': test_set.col_num
+        'col_num': test_set.col_num,
+        'test_loader': test_loader
     }
 
-    time_test(params, strategy_params, temp_list, test_loader)
+    time_test(params, strategy_params, temp_list)
     logging.shutdown()
