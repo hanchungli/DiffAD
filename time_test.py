@@ -43,10 +43,26 @@ def time_test(params, strategy_params, temp_list):
 
     result_path = '{}'.format(opt['path']['results'])
     os.makedirs(result_path, exist_ok=True)
-
+with torch.enable_grad():  # 启用梯度计算
     for _, test_data in enumerate(test_loader):
         idx += 1
         diffusion.feed_data(test_data)
+        # ---------- 插入对抗攻击 ----------
+        original_sr = test_data['SR'].clone().to(diffusion.device)
+        target_ori = test_data['ORI'].to(diffusion.device)
+        # 生成对抗样本
+        adversarial_sr = generate_adversarial_pgd(
+            diffusion.netG, 
+            original_sr, 
+            target_ori,
+            epsilon=opt['attack_params']['epsilon'],
+            alpha=opt['attack_params']['alpha'],
+            iterations=opt['attack_params']['iterations']
+        )
+        # 替换测试数据中的SR
+        test_data['SR'] = adversarial_sr
+        diffusion.feed_data(test_data)
+        # ---------- 对抗攻击结束 ----------
         diffusion.test(continous=False)
         visuals = diffusion.get_current_visuals()
 
