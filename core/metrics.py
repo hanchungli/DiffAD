@@ -39,7 +39,28 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         adversarial_sr.requires_grad = True
     
     return adversarial_sr.detach()
+def calculate_attack_impact(clean_df, attacked_df):
+    """
+    计算对抗攻击对异常检测的影响
+    :param clean_df: 原始测试结果DataFrame
+    :param attacked_df: 对抗攻击后的测试结果DataFrame
+    :return: 攻击指标字典（F1下降比例、误报率变化等）
+    """
+    # 计算原始F1
+    clean_f1 = f1_score(clean_df['label'], clean_df['differ'] > clean_df['differ'].quantile(0.95))
     
+    # 计算攻击后F1
+    attacked_f1 = f1_score(attacked_df['label'], attacked_df['differ'] > attacked_df['differ'].quantile(0.95))
+    
+    # 计算下降比例
+    drop_ratio = (clean_f1 - attacked_f1) / clean_f1
+    
+    return {
+        'clean_f1': clean_f1,
+        'attacked_f1': attacked_f1,
+        'f1_drop_ratio': drop_ratio
+    }
+
 
 def squeeze_tensor(tensor):
     return tensor.squeeze().cpu()
