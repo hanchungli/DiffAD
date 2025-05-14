@@ -21,9 +21,16 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         # 清零梯度
         if adversarial_sr.grad is not None:
             adversarial_sr.grad.zero_()
-        
+        # 计算 min_num 和 max_num
+        min_num = target_ori.min().item()
+        max_num = target_ori.max().item()
         # 生成插补结果并计算损失
-        model_output = model.super_resolution(adversarial_sr, continous=False)
+        model_output = model.super_resolution(
+            adversarial_sr,
+            min_num=min_num,
+            max_num=max_num,
+            continous=False
+        )
         loss = torch.nn.functional.l1_loss(model_output, target_ori)
         
         # 反向传播获取梯度
