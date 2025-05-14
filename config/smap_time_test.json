@@ -11,6 +11,11 @@
     "checkpoint": "checkpoint",
     "resume_state": "experiments/SMAP_TRAIN_128_2048_100/checkpoint/E100"
   },
+  "attack_params": {
+    "epsilon": 0.02,     // 最大扰动幅度（L∞范数）
+    "alpha": 0.005,      // 单步更新步长（建议为epsilon/iterations）
+    "iterations": 10     // PGD迭代次数
+  },
   "datasets": {
     "test": {
       "name": "smap_test",
