@@ -74,6 +74,7 @@ def time_test(params, strategy_params, temp_list):
     result_path = '{}'.format(opt['path']['results'])
     os.makedirs(result_path, exist_ok=True)
 with torch.enable_grad():  # 启用梯度计算
+    
     for _, test_data in enumerate(test_loader):
         idx += 1
         diffusion.feed_data(test_data)
@@ -175,5 +176,5 @@ if __name__ == '__main__':
         'col_num': test_set.col_num
     }
 
-    time_test(params, strategy_params, temp_list)
+    time_test(params, strategy_params, temp_list, test_loader)
     logging.shutdown()
