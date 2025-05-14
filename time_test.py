@@ -63,6 +63,10 @@ with torch.enable_grad():  # 启用梯度计算
         test_data['SR'] = adversarial_sr
         diffusion.feed_data(test_data)
         # ---------- 对抗攻击结束 ----------
+        # 关闭梯度以执行正常测试
+        with torch.no_grad():
+            diffusion.test(continous=False)
+            visuals = diffusion.get_current_visuals()
         diffusion.test(continous=False)
         visuals = diffusion.get_current_visuals()
 
