@@ -84,7 +84,7 @@ def time_test(params, strategy_params, temp_list):
         original_sr = test_data['SR'].clone().to(diffusion.device)
         target_ori = test_data['ORI'].to(diffusion.device)
         # 生成对抗样本
-        adversarial_sr = generate_adversarial_pgd(
+        adversarial_sr = Metrics.generate_adversarial_pgd(
             diffusion.netG, 
             original_sr, 
             target_ori,
