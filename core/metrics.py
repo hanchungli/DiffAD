@@ -29,7 +29,7 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
                 max_num=target_ori.max().item(),
                 continous=False
             )
-        loss = torch.nn.functional.l1_loss(model_output, target_ori)
+            loss = torch.nn.functional.l1_loss(model_output, target_ori.view_as(model_output))
         
         # 反向传播获取梯度
         loss.backward()
@@ -38,11 +38,11 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         # 更新对抗样本（直接操作 .data 避免断开计算图）
         adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
         
-        # 投影到扰动约束范围内
+        # 单步更新对抗样本
         perturbed_data = adversarial_sr.data + alpha * grad.sign()
         delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
         adversarial_sr.data = original_sr.data + delta
-        adversarial_sr.data.clamp_(0, 1)  # 限制像素范围
+        adversarial_sr.data.clamp_(0, 1)
     
     return adversarial_sr.detach()
 def calculate_attack_impact(clean_df, attacked_df):
