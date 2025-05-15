@@ -39,9 +39,10 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
         
         # 投影到扰动约束范围内
-        delta = torch.clamp(perturbed_data - original_sr, min=-epsilon, max=epsilon)
-        adversarial_sr = torch.clamp(original_sr + delta, 0, 1)
-        adversarial_sr.requires_grad = True
+        perturbed_data = adversarial_sr.data + alpha * grad.sign()
+        delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
+        adversarial_sr.data = original_sr.data + delta
+        adversarial_sr.data.clamp_(0, 1)  # 限制像素范围
     
     return adversarial_sr.detach()
 def calculate_attack_impact(clean_df, attacked_df):
