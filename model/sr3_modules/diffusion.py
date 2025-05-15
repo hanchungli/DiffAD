@@ -170,9 +170,9 @@ class GaussianDiffusion(nn.Module):
         noise = torch.randn_like(x) if t > 0 else torch.zeros_like(x)
         return model_mean + noise * (0.5 * model_log_variance).exp()
 
-    @torch.no_grad()
+    
     def p_sample_loop(self, x_in, continous=False):
-        with torch.no_grad():  # 默认禁用梯度
+        
         device = self.betas.device
         q = 0
 
@@ -181,6 +181,7 @@ class GaussianDiffusion(nn.Module):
             shape = x_in
             img = torch.randn(shape, device=device)
             ret_img = img
+            
             for i in tqdm(reversed(range(0, self.num_timesteps))):
               with torch.enable_grad():  # 局部启用梯度
                 img = self.p_sample(img, i, condition_x=x, clip_denoised=True)
@@ -194,9 +195,10 @@ class GaussianDiffusion(nn.Module):
 
             for i in tqdm(reversed(range(0, self.num_timesteps)), desc='sampling loop time step',
                           total=self.num_timesteps):
-                img = self.p_sample(img, i, condition_x=x, clip_denoised=True)
+                with torch.enable_grad():
+                   img = self.p_sample(img, i, condition_x=x, clip_denoised=True)
                 if i % sample_inter == 0:
-                    ret_img = torch.cat([ret_img, img], dim=0)
+                   ret_img = torch.cat([ret_img, img], dim=0)
         if continous:
             return ret_img
         else:
