@@ -208,7 +208,7 @@ class GaussianDiffusion(nn.Module):
         channels = self.channels
         return self.p_sample_loop((batch_size, channels, time_size, time_size), continous)
 
-    @torch.no_grad()
+    
     def super_resolution(self, x_in, min_num, max_num, continous=False):
         self.min_num = min_num
         self.max_num = max_num
