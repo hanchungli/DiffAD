@@ -14,12 +14,13 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
     :param iterations: 迭代次数
     :return: 对抗样本
     """
-    adversarial_sr = original_sr.clone().requires_grad_(True)
+    adversarial_sr = original_sr.clone().requires_grad_(True)   # 初始化时启用梯度
     
     for _ in range(iterations):
         # 清零梯度
         if adversarial_sr.grad is not None:
             adversarial_sr.grad.zero_()
+        model.train()  # 切换模型为训练模式
         # 强制启用梯度计算
         with torch.enable_grad():
             model_output = model.super_resolution(
@@ -34,8 +35,8 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         loss.backward()
         grad = adversarial_sr.grad.data
         
-        # 更新对抗样本（符号梯度方向）
-        perturbed_data = adversarial_sr + alpha * grad.sign()
+        # 更新对抗样本（直接操作 .data 避免断开计算图）
+        adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
         
         # 投影到扰动约束范围内
         delta = torch.clamp(perturbed_data - original_sr, min=-epsilon, max=epsilon)
