@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
-def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha=0.001, iterations=10):
+def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.05, alpha=0.01, iterations=20):
     """
     基于PGD生成对抗样本
     :param model: 扩散模型
@@ -34,7 +34,8 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.01, alpha
         # 反向传播获取梯度
         loss.backward()
         grad = adversarial_sr.grad.data
-        
+        # 打印梯度和损失变化
+        print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
         # 更新对抗样本（直接操作 .data 避免断开计算图）
         adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
         
