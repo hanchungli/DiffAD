@@ -108,8 +108,7 @@ def tensor2allcsv(visuals, col_num):
 
 
 def merge_all_csv(all_datas, all_data):
-    all_datas = pd.concat([all_datas, all_data])
-    return all_datas
+    return pd.concat([all_datas, all_data], ignore_index=True)
 
 
 def save_csv(data, data_path):
