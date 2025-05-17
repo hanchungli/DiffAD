@@ -67,62 +67,80 @@ def time_test(params, strategy_params, temp_list):
         opt['model']['beta_schedule'][opt['phase']], schedule_phase=opt['phase'])
 
     logger.info('Begin Model Evaluation.')
-    idx = 0
-
-    all_datas = pd.DataFrame()
-    sr_datas = pd.DataFrame()
-    differ_datas = pd.DataFrame()
-
-    result_path = '{}'.format(opt['path']['results'])
-    os.makedirs(result_path, exist_ok=True)
-    with torch.enable_grad():  # 启用梯度计算
-    
-      for _, test_data in enumerate(test_loader):
-        idx += 1
-        diffusion.feed_data(test_data)
-        # ---------- 插入对抗攻击 ----------
-        original_sr = test_data['SR'].clone().to(diffusion.device)
-        target_ori = test_data['ORI'].to(diffusion.device)
-        # 生成对抗样本
-        diffusion.netG.train()  # 强制模型进入训练模式
-        adversarial_sr = Metrics.generate_adversarial_pgd(
-            diffusion.netG, 
-            original_sr, 
-            target_ori,
-            epsilon=opt['attack_params']['epsilon'],
-            alpha=opt['attack_params']['alpha'],
-            iterations=opt['attack_params']['iterations']
-        )
-        # 替换测试数据中的SR
-        test_data['SR'] = adversarial_sr
-        diffusion.feed_data(test_data)
-        # ---------- 对抗攻击结束 ----------
-        # 关闭梯度以执行正常测试
-        with torch.no_grad():
+    # ========================================================
+    # 1. 运行正常测试（无攻击）
+    # ========================================================
+    logger.info('Running clean evaluation (no attack)...')
+    clean_all_datas = pd.DataFrame()
+    with torch.no_grad():
+        for _, test_data in enumerate(test_loader):
+            diffusion.feed_data(test_data)
             diffusion.test(continous=False)
             visuals = diffusion.get_current_visuals()
-        diffusion.test(continous=False)
-        visuals = diffusion.get_current_visuals()
+            all_data, _, _ = Metrics.tensor2allcsv(visuals, params['col_num'])
+            clean_all_datas = Metrics.merge_all_csv(clean_all_datas, all_data)
 
-        all_data, sr_df, differ_df = Metrics.tensor2allcsv(visuals, params['col_num'])
-        all_datas = Metrics.merge_all_csv(all_datas, all_data)
-        sr_datas = Metrics.merge_all_csv(sr_datas, sr_df)
-        differ_datas = Metrics.merge_all_csv(differ_datas, differ_df)
+    # ========================================================
+    # 2. 运行对抗攻击测试
+    # ========================================================
+    logger.info('Running adversarial evaluation...')
+    attacked_all_datas = pd.DataFrame()
+    with torch.enable_grad():
+        for _, test_data in enumerate(test_loader):
+            # 备份原始数据
+            original_sr = test_data['SR'].clone().to(diffusion.device)
+            target_ori = test_data['ORI'].to(diffusion.device)
+            
+            # 生成对抗样本
+            diffusion.netG.train()  # 强制模型进入训练模式以允许梯度计算
+            adversarial_sr = Metrics.generate_adversarial_pgd(
+                diffusion.netG, 
+                original_sr, 
+                target_ori,
+                epsilon=opt['attack_params']['epsilon'],
+                alpha=opt['attack_params']['alpha'],
+                iterations=opt['attack_params']['iterations']
+            )
+            
+            # 替换测试数据中的SR
+            test_data['SR'] = adversarial_sr
+            diffusion.feed_data(test_data)
+            
+            # 关闭梯度以执行正常测试
+            with torch.no_grad():
+                diffusion.test(continous=False)
+                visuals = diffusion.get_current_visuals()
+            
+            # 保存攻击后数据
+            all_data, _, _ = Metrics.tensor2allcsv(visuals, params['col_num'])
+            attacked_all_datas = Metrics.merge_all_csv(attacked_all_datas, all_data)
 
-    all_datas = all_datas.reset_index(drop=True)
-    sr_datas = sr_datas.reset_index(drop=True)
-    differ_datas = differ_datas.reset_index(drop=True)
-
-    for i in range(params['row_num'], all_datas.shape[0]):
-        all_datas.drop(index=[i], inplace=True)
-        sr_datas.drop(index=[i], inplace=True)
-        differ_datas.drop(index=[i], inplace=True)
-
-    f1 = Metrics.relabeling_strategy(all_datas, strategy_params)
-
-    temp_f1 = Decimal(f1).quantize(Decimal("0.0000"))
-
-    print('F1-score: ', float(temp_f1))
+    # ========================================================
+    # 3. 后处理与评估
+    # ========================================================
+    # 截断冗余数据
+    for df in [clean_all_datas, attacked_all_datas]:
+        for i in range(params['row_num'], df.shape[0]):
+            df.drop(index=[i], inplace=True)
+    
+    # 计算F1并输出攻击效果
+    clean_f1 = Metrics.relabeling_strategy(clean_all_datas, strategy_params)
+    attacked_f1 = Metrics.relabeling_strategy(attacked_all_datas, strategy_params)
+    
+    # 计算攻击指标
+    attack_metrics = Metrics.calculate_attack_impact(clean_all_datas, attacked_all_datas)
+    logger.info(
+        f"[Attack Impact] Clean F1: {attack_metrics['clean_f1']:.4f} | "
+        f"Attacked F1: {attack_metrics['attacked_f1']:.4f} | "
+        f"F1 Drop Ratio: {attack_metrics['f1_drop_ratio'] * 100:.2f}%"
+    )
+    
+    # 可视化对比
+    Metrics.plot_attack_comparison(clean_all_datas, attacked_all_datas)
+    
+    # 打印最终结果
+    temp_f1 = Decimal(attacked_f1).quantize(Decimal("0.0000"))
+    print('Final F1-score (attacked): ', float(temp_f1))
 
 
 # evaluate model performance
