@@ -120,8 +120,8 @@ def time_test(params, strategy_params, temp_list):
     # ========================================================
     # 截断冗余数据
     for df in [clean_all_datas, attacked_all_datas]:
-        for i in range(params['row_num'], df.shape[0]):
-            df.drop(index=[i], inplace=True)
+    if df.shape[0] > params['row_num']:
+        df.drop(index=df.index[params['row_num']:], inplace=True)
     
     # 计算F1并输出攻击效果
     clean_f1 = Metrics.relabeling_strategy(clean_all_datas, strategy_params)
