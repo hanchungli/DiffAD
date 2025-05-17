@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
-def generate_adversarial_pgd(model, original_sr, target_ori, epsilon=0.05, alpha=0.01, iterations=20):
+def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, iterations):
     """
     基于PGD生成对抗样本
     :param model: 扩散模型
