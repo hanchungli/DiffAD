@@ -13,35 +13,7 @@ import model as Model
 from decimal import Decimal
 import matplotlib.pyplot as plt
 
-def plot_attack_comparison(clean_data, attacked_data, index=0):
-    """
-    绘制原始数据、对抗样本及插补结果对比图
-    """
-    plt.figure(figsize=(15, 5))
-    
-    # 原始数据
-    plt.subplot(131)
-    plt.plot(clean_data['ORI'].iloc[index], label='Original')
-    plt.plot(clean_data['SR'].iloc[index], linestyle='--', label='Clean SR')
-    plt.title("Clean Sample")
-    plt.legend()
-    
-    # 对抗样本
-    plt.subplot(132)
-    plt.plot(attacked_data['ORI'].iloc[index], label='Original')
-    plt.plot(attacked_data['SR'].iloc[index], linestyle='--', label='Adversarial SR')
-    plt.title("Adversarial Sample")
-    plt.legend()
-    
-    # 插补误差对比
-    plt.subplot(133)
-    plt.plot(clean_data['differ'].iloc[index], label='Clean Differ')
-    plt.plot(attacked_data['differ'].iloc[index], label='Attacked Differ')
-    plt.title("Anomaly Score Comparison")
-    plt.legend()
-    
-    plt.tight_layout()
-    plt.savefig('attack_visualization.png')
+
 
 def time_test(params, strategy_params, temp_list):
     # 从 params 中获取 test_loader
@@ -136,7 +108,7 @@ def time_test(params, strategy_params, temp_list):
     )
     
     # 可视化对比
-    Metrics.plot_attack_comparison(clean_all_datas, attacked_all_datas)
+    Metrics.plot_attack_comparison(clean_all_datas, attacked_all_datas, index=0)
     
     # 打印最终结果
     temp_f1 = Decimal(attacked_f1).quantize(Decimal("0.0000"))
