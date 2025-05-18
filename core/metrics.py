@@ -19,8 +19,7 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     
     for _ in range(iterations):
         # 清零梯度
-        if adversarial_sr.grad is not None:
-            adversarial_sr.grad.zero_()
+        adversarial_sr.grad = None
         model.train()  # 切换模型为训练模式
         # 强制启用梯度计算
         with torch.enable_grad():
