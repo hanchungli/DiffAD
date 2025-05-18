@@ -16,7 +16,7 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     :return: 对抗样本
     """
     adversarial_sr = original_sr.clone().requires_grad_(True)   # 初始化时启用梯度
-    
+    print(f"初始对抗样本梯度追踪状态: {adversarial_sr.requires_grad}")  # 应为True
     for _ in range(iterations):
         # 清零梯度
         adversarial_sr.grad = None
@@ -29,13 +29,14 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
                 max_num=target_ori.max().item(),
                 continous=False
             )
-            loss = torch.nn.functional.l1_loss(model_output, target_ori.view_as(model_output))
+            #使用L2损失
+            loss = torch.nn.functional.mse_loss(model_output, target_ori)
         
         # 反向传播获取梯度
         loss.backward()
         grad = adversarial_sr.grad.data
-        # 打印梯度和损失变化
-        print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
+        
+        
         # 更新对抗样本（直接操作 .data 避免断开计算图）
         adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
         
@@ -44,6 +45,8 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
         adversarial_sr.data = original_sr.data + delta
         adversarial_sr.data.clamp_(0, 1)
+        # 打印梯度和损失变化
+        print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
     
     return adversarial_sr.detach()
 def calculate_attack_impact(clean_df, attacked_df):
