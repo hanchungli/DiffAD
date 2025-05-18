@@ -58,7 +58,7 @@ def time_test(params, strategy_params, temp_list):
     logger.info('Running adversarial evaluation...')
     attacked_all_datas = pd.DataFrame()
     # 定义默认攻击参数
-     default_attack_params = {
+    default_attack_params = {
       'epsilon': 0.1,      # 默认扰动幅度
       'alpha': 0.01,       # 默认单步更新步长
       'iterations': 10     # 默认PGD迭代次数
