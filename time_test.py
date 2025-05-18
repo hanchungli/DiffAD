@@ -113,7 +113,7 @@ def time_test(params, strategy_params, temp_list):
     
     # 计算攻击指标
     attack_metrics = Metrics.calculate_attack_impact(clean_all_datas, attacked_all_datas)
-    logger.info(
+    print(
         f"[Attack Impact] Clean F1: {attack_metrics['clean_f1']:.4f} | "
         f"Attacked F1: {attack_metrics['attacked_f1']:.4f} | "
         f"F1 Drop Ratio: {attack_metrics['f1_drop_ratio'] * 100:.2f}%"
@@ -148,11 +148,15 @@ if __name__ == '__main__':
     opt = Logger.parse(args, model_epoch)
     # Convert to NoneDict, which return None for missing key.
     opt = Logger.dict_to_nonedict(opt)
-    logger_name = 'test' + str(model_epoch)
+    logger_name = 'test' 
     # logging
     Logger.setup_logger(logger_name, opt['path']['log'], 'test', level=logging.INFO)
-    logger = logging.getLogger('base')
+    logger = logging.getLogger(logger_name)
     logger.info(Logger.dict2str(opt))
+    # 验证日志配置
+    logger.info("===== 日志系统已激活 =====")
+    logger.info(f"日志文件: {os.path.abspath(os.path.join(opt['path']['log'], 'test.log'))}")
+    logger.info(f"当前工作目录: {os.getcwd()}")
     tb_logger = SummaryWriter(log_dir=opt['path']['tb_logger'])
 
     test_set = Data.create_dataset(opt['datasets']['test'], 'test')
