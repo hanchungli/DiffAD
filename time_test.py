@@ -73,9 +73,9 @@ def time_test(params, strategy_params, temp_list):
                 alpha=opt['attack_params']['alpha'],
                 iterations=opt['attack_params']['iterations']
             )
-            
+            diffusion.netG.eval()   # 恢复评估模式
             # 替换测试数据中的SR
-            test_data['SR'] = adversarial_sr
+            test_data['SR'] = adversarial_sr.clamp(0, 1)
             diffusion.feed_data(test_data)
             
             # 关闭梯度以执行正常测试
