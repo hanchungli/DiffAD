@@ -35,15 +35,11 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         # 反向传播获取梯度
         loss.backward()
         grad = adversarial_sr.grad.data
-        
-        
-        # 更新对抗样本（直接操作 .data 避免断开计算图）
-        adversarial_sr.data = adversarial_sr.data + alpha * grad.sign()
-        
+         
         # 单步更新对抗样本
         perturbed_data = adversarial_sr.data + alpha * grad.sign()
         delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
-        adversarial_sr.data = original_sr.data + delta
+        adversarial_sr.data = original_sr.data + delta.detach()
         adversarial_sr.data.clamp_(0, 1)
         # 打印梯度和损失变化
         print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
