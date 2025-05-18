@@ -182,9 +182,10 @@ class GaussianDiffusion(nn.Module):
             img = torch.randn(shape, device=device)
             ret_img = img
             
-            for i in tqdm(reversed(range(0, self.num_timesteps))):
-              with torch.enable_grad():  # 局部启用梯度
-                img = self.p_sample(img, i, condition_x=x, clip_denoised=True)
+            for i in tqdm(reversed(range(0, self.num_timesteps)), desc='sampling loop time step',
+                          total=self.num_timesteps):
+              
+                img = self.p_sample(img, i, condition_x=x_in, clip_denoised=True)
                 if i % sample_inter == 0:
                     ret_img = torch.cat([ret_img, img], dim=0)
         else:
