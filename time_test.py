@@ -57,6 +57,18 @@ def time_test(params, strategy_params, temp_list):
     # ========================================================
     logger.info('Running adversarial evaluation...')
     attacked_all_datas = pd.DataFrame()
+    # 定义默认攻击参数
+     default_attack_params = {
+      'epsilon': 0.1,      # 默认扰动幅度
+      'alpha': 0.01,       # 默认单步更新步长
+      'iterations': 10     # 默认PGD迭代次数
+    }
+
+    # 获取用户配置的攻击参数（处理None情况）
+    user_attack_params = opt.get('attack_params', {}) or {}
+
+    # 合并参数：用户配置覆盖默认值
+    attack_params = {**default_attack_params, **user_attack_params}
     with torch.enable_grad():
         for _, test_data in enumerate(test_loader):
             # 备份原始数据
@@ -69,9 +81,9 @@ def time_test(params, strategy_params, temp_list):
                 diffusion.netG, 
                 original_sr, 
                 target_ori,
-                epsilon=opt['attack_params']['epsilon'],
-                alpha=opt['attack_params']['alpha'],
-                iterations=opt['attack_params']['iterations']
+                epsilon=attack_params['epsilon'],
+                alpha=attack_params['alpha'],
+                iterations=attack_params['iterations']
             )
             diffusion.netG.eval()   # 恢复评估模式
             # 替换测试数据中的SR
