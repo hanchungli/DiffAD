@@ -226,9 +226,8 @@ def tensor2allcsv(visuals, col_num, attack_delta=None):
     df['LR'] = [row for row in lr_data]
     df['label'] = squeeze_tensor(visuals['label'])
   
-    # 计算差异数据（ORI - SR）
-    differ_data = ori_data - sr_data
-    differ_df = pd.DataFrame([row for row in differ_data])  # 转换为DataFrame
+    # 计算每样本的绝对差异均值
+    df['differ'] = (ori_data - sr_data).abs().mean(axis=1).tolist()
 
     # 若为对抗样本，记录扰动
     if attack_delta is not None:
