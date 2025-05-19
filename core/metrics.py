@@ -5,7 +5,7 @@ import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
 def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, iterations, 
-                          momentum_decay=0.9, multiscale_weights=None):
+                          momentum_decay=0.9, multiscale_weights=None,, sensitivity=1.5):
     """
     基于PGD生成对抗样本
     :param model: 扩散模型
@@ -22,7 +22,7 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     # 预计算原始差异（用于动态调整目标）
     with torch.no_grad():
         clean_output = model.super_resolution(original_sr)
-        clean_differ = (target_ori - clean_output).abs()                        
+        clean_differ = (target_ori - clean_output).abs()       # [B, C, H, W]                 
     for _ in range(iterations):
         # 清零梯度
         adversarial_sr.grad = None
@@ -35,18 +35,38 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         loss.backward()
         grad = adversarial_sr.grad.data
 
-        # 动量累积
+        # === 动量累积 ===
         accumulated_grad = momentum_decay * accumulated_grad + (1 - momentum_decay) * grad
         
-        # 归一化梯度方向
-        grad_norm = accumulated_grad / (accumulated_grad.norm(p=1, dim=(1,2,3), keepdim=True) + 1e-8)
-        # 单步更新对抗样本
-        perturbed_data = adversarial_sr.data + alpha * grad.sign()
-        delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
+        # === 多尺度扰动生成 ===
+        base_delta = alpha * accumulated_grad.sign()
+        if multiscale_weights is not None:
+            multiscale_perturb = generate_multiscale_perturbation(
+                base_delta, 
+                scales=[0.1, 0.3, 0.5], 
+                weights=multiscale_weights
+            )
+            total_delta = base_delta + 0.3 * multiscale_perturb  # 比例可调
+        else:
+            total_delta = base_delta
+        
+        # === 自适应约束应用 ===
+        current_epsilon = adaptive_epsilon_mask(
+            clean_differ, 
+            base_epsilon=epsilon, 
+            sensitivity=sensitivity
+        )  # [B, 1, 1, 1]
+        
+        # 扰动裁剪与更新
+        perturbed_data = adversarial_sr.data + total_delta
+        delta = torch.clamp(perturbed_data - original_sr.data,
+                           min=-current_epsilon, 
+                           max=current_epsilon)
         adversarial_sr.data = original_sr.data + delta.detach()
         adversarial_sr.data.clamp_(0, 1)
-        # 打印梯度和损失变化
-        print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
+        
+        # 日志输出
+        print(f"Iter {_+1}: Loss={loss.item():.2f} | Max Delta={delta.abs().max().item():.4f}")
     
     return adversarial_sr.detach()
     
