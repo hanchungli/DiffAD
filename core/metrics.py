@@ -159,7 +159,7 @@ def plot_attack_comparison(clean_data, attacked_data, index=0, save_dir='results
     clean_ori = np.array(clean_data.iloc[index]['ORI'])
     clean_sr = np.array(clean_data.iloc[index]['SR'])
     attacked_ori = np.array(attacked_data.iloc[index]['ORI'])
-    attacked_sr = np.array(attacked_data.iloc[index]['SR']
+    attacked_sr = np.array(attacked_data.iloc[index]['SR'])
     
     # 子图1: 原始样本对比
     plt.subplot(131)
