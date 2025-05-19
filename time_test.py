@@ -49,7 +49,7 @@ def time_test(params, strategy_params, temp_list):
             diffusion.feed_data(test_data)
             diffusion.test(continous=False)
             visuals = diffusion.get_current_visuals()
-            all_data, _, _ = Metrics.tensor2allcsv(visuals, params['col_num'])
+            all_data, sr_data, differ_data = Metrics.tensor2allcsv(visuals, params['col_num'])
             clean_all_datas = Metrics.merge_all_csv(clean_all_datas, all_data)
 
     # ========================================================
@@ -102,7 +102,7 @@ def time_test(params, strategy_params, temp_list):
                 visuals = diffusion.get_current_visuals()
             
             # 保存攻击后数据
-            all_data, _, _ = Metrics.tensor2allcsv(visuals, params['col_num'])
+            all_data,  sr_data, differ_data = Metrics.tensor2allcsv(visuals, params['col_num'])
             attacked_all_datas = Metrics.merge_all_csv(attacked_all_datas, all_data)
 
     # ========================================================
