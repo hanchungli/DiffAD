@@ -67,29 +67,50 @@ def calculate_attack_impact(clean_df, attacked_df):
         'f1_drop_ratio': drop_ratio
     }
 
-def plot_attack_comparison(clean_data, attacked_data, index=0):
-    """
-    绘制原始数据、对抗样本及插补结果对比图
-    """
+def plot_attack_comparison(clean_data, attacked_data, index=0, save_dir='results/visualization'):
+    """绘制原始/对抗样本对比图"""
+    import os
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # 检查索引有效性
+    if index >= len(clean_data) or index >= len(attacked_data):
+        raise ValueError(f"索引{index}超出数据范围 (clean长度={len(clean_data)}, attacked长度={len(attacked_data)})")
+    
     plt.figure(figsize=(15, 5))
     
-    # 原始数据与干净重构
-    plt.subplot(2, 1, 1)
-    plt.plot(clean_df['ORI'].iloc[idx], label='Original', color='blue')
-    plt.plot(clean_df['SR'].iloc[idx], label='Clean SR', linestyle='--', color='green')
-    plt.title(f"Clean Sample (Index {idx})")
-    plt.legend()
-        
-    # 对抗样本与攻击后重构
-    plt.subplot(2, 1, 2)
-    plt.plot(attacked_df['ORI'].iloc[idx], label='Original', color='blue')
-    plt.plot(attacked_df['SR'].iloc[idx], label='Adversarial SR', linestyle='--', color='red')
-    plt.title(f"Adversarial Sample (Index {idx})")
-    plt.legend()  
+    # 提取数据并转换为NumPy数组
+    clean_ori = clean_data['ORI'].iloc[index].values.astype(float)
+    clean_sr = clean_data['SR'].iloc[index].values.astype(float)
+    attacked_ori = attacked_data['ORI'].iloc[index].values.astype(float)
+    attacked_sr = attacked_data['SR'].iloc[index].values.astype(float)
     
+    # 子图1: 原始样本对比
+    plt.subplot(131)
+    plt.plot(clean_ori, label='Original', color='blue', linewidth=1)
+    plt.plot(clean_sr, label='Clean SR', linestyle='--', color='green', linewidth=1)
+    plt.title("Clean Sample")
+    plt.legend()
+    
+    # 子图2: 对抗样本对比
+    plt.subplot(132)
+    plt.plot(attacked_ori, label='Original', color='blue', linewidth=1)
+    plt.plot(attacked_sr, label='Adversarial SR', linestyle='--', color='red', linewidth=1)
+    plt.title("Adversarial Sample")
+    plt.legend()
+    
+    # 子图3: 异常分数对比
+    plt.subplot(133)
+    plt.plot(clean_data['differ'].iloc[index], label='Clean Differ', alpha=0.7)
+    plt.plot(attacked_data['differ'].iloc[index], label='Attacked Differ', alpha=0.7)
+    plt.title("Anomaly Score Comparison")
+    plt.legend()
+    
+    # 保存并关闭
     plt.tight_layout()
-    plt.savefig('attack_visualization.png')
-    plt.close()
+    save_path = os.path.join(save_dir, f'attack_comparison_idx_{index}.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()  # 显式关闭图形释放内存
+    return save_path
 def squeeze_tensor(tensor):
     return tensor.squeeze().cpu()
 
