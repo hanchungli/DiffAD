@@ -73,30 +73,23 @@ def plot_attack_comparison(clean_data, attacked_data, index=0):
     """
     plt.figure(figsize=(15, 5))
     
-    # 原始数据
-    plt.subplot(131)
-    plt.plot(clean_data['ORI'].iloc[index], label='Original')
-    plt.plot(clean_data['SR'].iloc[index], linestyle='--', label='Clean SR')
-    plt.title("Clean Sample")
+    # 原始数据与干净重构
+    plt.subplot(2, 1, 1)
+    plt.plot(clean_df['ORI'].iloc[idx], label='Original', color='blue')
+    plt.plot(clean_df['SR'].iloc[idx], label='Clean SR', linestyle='--', color='green')
+    plt.title(f"Clean Sample (Index {idx})")
     plt.legend()
-    
-    # 对抗样本
-    plt.subplot(132)
-    plt.plot(attacked_data['ORI'].iloc[index], label='Original')
-    plt.plot(attacked_data['SR'].iloc[index], linestyle='--', label='Adversarial SR')
-    plt.title("Adversarial Sample")
-    plt.legend()
-    
-    # 插补误差对比
-    plt.subplot(133)
-    plt.plot(clean_data['differ'].iloc[index], label='Clean Differ')
-    plt.plot(attacked_data['differ'].iloc[index], label='Attacked Differ')
-    plt.title("Anomaly Score Comparison")
-    plt.legend()
+        
+    # 对抗样本与攻击后重构
+    plt.subplot(2, 1, 2)
+    plt.plot(attacked_df['ORI'].iloc[idx], label='Original', color='blue')
+    plt.plot(attacked_df['SR'].iloc[idx], label='Adversarial SR', linestyle='--', color='red')
+    plt.title(f"Adversarial Sample (Index {idx})")
+    plt.legend()  
     
     plt.tight_layout()
     plt.savefig('attack_visualization.png')
-    
+    plt.close()
 def squeeze_tensor(tensor):
     return tensor.squeeze().cpu()
 
@@ -108,7 +101,8 @@ def update_csv_col_name(all_datas):
     return df
 
 
-def tensor2allcsv(visuals, col_num):
+def tensor2allcsv(visuals, col_num,, attack_delta=None):
+    """将张量数据转换为结构化DataFrame，支持对抗扰动记录"""
     df = pd.DataFrame()
     sr_df = pd.DataFrame(squeeze_tensor(visuals['SR']))
     ori_df = pd.DataFrame(squeeze_tensor(visuals['ORI']))
@@ -128,7 +122,13 @@ def tensor2allcsv(visuals, col_num):
     df['INF'] = inf_df.mean(axis=1)
 
     df['differ'] = (ori_df - sr_df).abs().mean(axis=1)
+    df['mse'] = ((ori_df - sr_df)**2).mean(axis=1)      # 每行MSE
     df['label'] = squeeze_tensor(visuals['label'])
+    # 若为对抗样本，记录扰动信息
+    if attack_delta is not None:
+        delta_np = squeeze_tensor(attack_delta.abs())
+        df['delta_Linf'] = delta_np.max(axis=1)         # 每样本L∞扰动
+        df['delta_L2'] = np.linalg.norm(delta_np, axis=1)  # 每样本L2扰动
 
     differ_df = (sr_df - ori_df)
 
