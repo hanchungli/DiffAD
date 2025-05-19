@@ -78,11 +78,11 @@ def plot_attack_comparison(clean_data, attacked_data, index=0, save_dir='results
     
     plt.figure(figsize=(15, 5))
     
-    # 提取数据并转换为NumPy数组
-    clean_ori = clean_data['ORI'].iloc[index].values.astype(float)
-    clean_sr = clean_data['SR'].iloc[index].values.astype(float)
-    attacked_ori = attacked_data['ORI'].iloc[index].values.astype(float)
-    attacked_sr = attacked_data['SR'].iloc[index].values.astype(float)
+    # 提取时间序列数据
+    clean_ori = np.array(clean_data.iloc[index]['ORI'])
+    clean_sr = np.array(clean_data.iloc[index]['SR'])
+    attacked_ori = np.array(attacked_data.iloc[index]['ORI'])
+    attacked_sr = np.array(attacked_data.iloc[index]['SR']
     
     # 子图1: 原始样本对比
     plt.subplot(131)
@@ -123,37 +123,27 @@ def update_csv_col_name(all_datas):
 
 
 def tensor2allcsv(visuals, col_num, attack_delta=None):
-    """将张量数据转换为结构化DataFrame，支持对抗扰动记录"""
+    """将张量转换为包含完整时间序列的DataFrame"""
     df = pd.DataFrame()
-    sr_df = pd.DataFrame(squeeze_tensor(visuals['SR']))
-    ori_df = pd.DataFrame(squeeze_tensor(visuals['ORI']))
-    lr_df = pd.DataFrame(squeeze_tensor(visuals['LR']))
-    inf_df = pd.DataFrame(squeeze_tensor(visuals['INF']))
-
-    if col_num != 1:
-        for i in range(col_num, sr_df.shape[1]):
-            sr_df.drop(labels=i, axis=1, inplace=True)
-            ori_df.drop(labels=i, axis=1, inplace=True)
-            lr_df.drop(labels=i, axis=1, inplace=True)
-            inf_df.drop(labels=i, axis=1, inplace=True)
-
-    df['SR'] = sr_df.mean(axis=1)
-    df['ORI'] = ori_df.mean(axis=1)
-    df['LR'] = lr_df.mean(axis=1)
-    df['INF'] = inf_df.mean(axis=1)
-
-    df['differ'] = (ori_df - sr_df).abs().mean(axis=1)
-    df['mse'] = ((ori_df - sr_df)**2).mean(axis=1)      # 每行MSE
+    
+    # 提取各通道数据并转换为列表存储
+    ori_data = squeeze_tensor(visuals['ORI'])  # [B, T]
+    sr_data = squeeze_tensor(visuals['SR'])
+    lr_data = squeeze_tensor(visuals['LR'])
+    
+    # 按样本存储为时间序列列表
+    df['ORI'] = [row for row in ori_data]
+    df['SR'] = [row for row in sr_data]
+    df['LR'] = [row for row in lr_data]
     df['label'] = squeeze_tensor(visuals['label'])
-    # 若为对抗样本，记录扰动信息
+    
+    # 若为对抗样本，记录扰动
     if attack_delta is not None:
-        delta_np = squeeze_tensor(attack_delta.abs())
-        df['delta_Linf'] = delta_np.max(axis=1)         # 每样本L∞扰动
-        df['delta_L2'] = np.linalg.norm(delta_np, axis=1)  # 每样本L2扰动
-
-    differ_df = (sr_df - ori_df)
-
-    return df, sr_df, differ_df
+        delta = squeeze_tensor(attack_delta.abs())
+        df['delta_Linf'] = delta.max(axis=1)
+        df['delta_L2'] = np.linalg.norm(delta, axis=1)
+    
+    return df
 
 
 def merge_all_csv(all_datas, all_data):
