@@ -125,6 +125,15 @@ def time_test(params, strategy_params, temp_list):
     # 打印最终结果
     temp_f1 = Decimal(attacked_f1).quantize(Decimal("0.0000"))
     print('Final F1-score (attacked): ', float(temp_f1))
+    print(
+    "\n[攻击效果总结]\n"
+    f"Clean F1: {stats['clean_f1']:.4f}\n"
+    f"Attacked F1: {stats['attacked_f1']:.4f}\n"
+    f"F1下降比例: {stats['f1_drop_ratio']*100:.2f}%\n"
+    f"Clean平均MSE: {stats['avg_clean_mse']:.4f}\n"
+    f"Attacked平均MSE: {stats['avg_attacked_mse']:.4f}\n"
+    f"攻击参数: {stats['attack_params']}"
+)
 
 
 # evaluate model performance
