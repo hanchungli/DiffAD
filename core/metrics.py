@@ -5,7 +5,7 @@ import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
 def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, iterations, 
-                          momentum_decay=0.9, multiscale_weights=None,, sensitivity=1.5):
+                          momentum_decay=0.9, multiscale_weights=None, sensitivity=1.5):
     """
     基于PGD生成对抗样本
     :param model: 扩散模型
