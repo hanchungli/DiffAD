@@ -14,7 +14,10 @@
   "attack_params": {
     "epsilon": 0.3,     // 最大扰动幅度（L∞范数）
     "alpha": 0.1,      // 单步更新步长
-    "iterations": 10     // PGD迭代次数
+    "iterations": 10,     // PGD迭代次数
+    "momentum_decay": 0.9,
+    "multiscale_weights": [0.4, 0.3, 0.3],
+    "sensitivity": 1.5
   },
   "datasets": {
     "test": {
