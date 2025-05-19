@@ -105,13 +105,14 @@ def generate_multiscale_perturbation(delta, scales=[0.1, 0.3, 0.5], weights=[0.4
     - scales: 频带比例（0-1）
     - weights: 各尺度扰动权重
     """
+    device = delta.device  # 获取输入张量的设备信息
     delta_fft = torch.fft.fftn(delta, dim=(-2, -1))
     perturb = torch.zeros_like(delta)
     
     for scale, weight in zip(scales, weights):
         # 创建频域掩码
         h, w = delta.shape[-2:]
-        mask = torch.zeros((h, w))
+        mask = torch.zeros((h, w), device=device)
         cx, cy = h//2, w//2
         radius = int(min(h, w) * scale)
         mask[cx-radius:cx+radius, cy-radius:cy+radius] = 1
