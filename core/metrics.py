@@ -35,7 +35,11 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         adversarial_sr.grad = None
         model.train()  # 切换模型为训练模式
         # 前向计算
-        adv_output = model.super_resolution(adversarial_sr)
+        adv_output = model.super_resolution(
+            adversarial_sr, 
+            min_num=min_val, 
+            max_num=max_val
+        )
         loss = adversarial_loss(adv_output, target_ori, clean_differ)
         
         # 反向传播获取梯度
