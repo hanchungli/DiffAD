@@ -226,16 +226,20 @@ def tensor2allcsv(visuals, col_num, attack_delta=None):
     df['LR'] = [row for row in lr_data]
     df['label'] = squeeze_tensor(visuals['label'])
   
-    # 计算每样本的绝对差异均值
-    df['differ'] = (ori_data - sr_data).abs().mean(axis=1).tolist()
-
-    # 若为对抗样本，记录扰动
+    # 计算差异值（ORI - SR的均值）
+    df['differ'] = [(ori - sr).mean() for ori, sr in zip(ori_data, sr_data)]
+    
+    # 对抗样本记录扰动
     if attack_delta is not None:
         delta = squeeze_tensor(attack_delta.abs())
-        df['delta_Linf'] = delta.max(axis=1)
-        df['delta_L2'] = np.linalg.norm(delta, axis=1)
-    sr_df = pd.DataFrame([row for row in sr_data])
-    return df, sr_df, differ_df 
+        df['delta_Linf'] = delta.max(axis=1).tolist()
+        df['delta_L2'] = np.linalg.norm(delta, axis=1).tolist()
+    
+    # 定义返回值（保持与调用方匹配）
+    sr_df = pd.DataFrame(sr_data.tolist())       # SR时间序列
+    differ_df = pd.DataFrame(ori_data - sr_data) # 完整差异序列
+    
+    return df, sr_df, differ_df
 
 
 def merge_all_csv(all_datas, all_data):
