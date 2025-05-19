@@ -122,7 +122,7 @@ def update_csv_col_name(all_datas):
     return df
 
 
-def tensor2allcsv(visuals, col_num,, attack_delta=None):
+def tensor2allcsv(visuals, col_num, attack_delta=None):
     """将张量数据转换为结构化DataFrame，支持对抗扰动记录"""
     df = pd.DataFrame()
     sr_df = pd.DataFrame(squeeze_tensor(visuals['SR']))
