@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, mean_squared_error
 
-def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, iterations):
+def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, iterations, 
+                          momentum_decay=0.9, multiscale_weights=None):
     """
     基于PGD生成对抗样本
     :param model: 扩散模型
@@ -17,25 +18,28 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     """
     adversarial_sr = original_sr.clone().requires_grad_(True)   # 初始化时启用梯度
     print(f"初始对抗样本梯度追踪状态: {adversarial_sr.requires_grad}")  # 应为True
+    accumulated_grad = torch.zeros_like(adversarial_sr)     
+    # 预计算原始差异（用于动态调整目标）
+    with torch.no_grad():
+        clean_output = model.super_resolution(original_sr)
+        clean_differ = (target_ori - clean_output).abs()                        
     for _ in range(iterations):
         # 清零梯度
         adversarial_sr.grad = None
         model.train()  # 切换模型为训练模式
-        # 强制启用梯度计算
-        with torch.enable_grad():
-            model_output = model.super_resolution(
-                adversarial_sr,
-                min_num=target_ori.min().item(),
-                max_num=target_ori.max().item(),
-                continous=False
-            )
-            #使用L2损失
-            loss = torch.nn.functional.mse_loss(model_output, target_ori)
+        # 前向计算
+        adv_output = model.super_resolution(adversarial_sr)
+        loss = adversarial_loss(adv_output, target_ori, clean_differ)
         
         # 反向传播获取梯度
         loss.backward()
         grad = adversarial_sr.grad.data
-         
+
+        # 动量累积
+        accumulated_grad = momentum_decay * accumulated_grad + (1 - momentum_decay) * grad
+        
+        # 归一化梯度方向
+        grad_norm = accumulated_grad / (accumulated_grad.norm(p=1, dim=(1,2,3), keepdim=True) + 1e-8)
         # 单步更新对抗样本
         perturbed_data = adversarial_sr.data + alpha * grad.sign()
         delta = torch.clamp(perturbed_data - original_sr.data, min=-epsilon, max=epsilon)
@@ -45,6 +49,59 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         print(f"Iter {_+1}/{iterations} | Loss: {loss.item():.4f} | Grad Norm: {grad.norm().item():.4f}")
     
     return adversarial_sr.detach()
+    
+def adversarial_loss(model_output, target_ori, clean_differ, lambda_anomaly=0.7):
+    """
+    组合损失函数：
+    - 正常区域：最大化重构误差
+    - 异常区域：最小化差异
+    """
+    current_differ = (target_ori - model_output).abs()
+    
+    # 正常区域掩码（原始差异低于95%分位数）
+    normal_mask = (clean_differ < clean_differ.quantile(0.95)).float()
+    loss_normal = - (current_differ * normal_mask).mean()  # 最大化误差
+    
+    # 异常区域掩码（原始差异高于95%分位数）
+    anomaly_mask = (clean_differ >= clean_differ.quantile(0.95)).float()
+    loss_anomaly = (current_differ * anomaly_mask).mean()  # 最小化误差
+    
+    return loss_normal + lambda_anomaly * loss_anomaly
+    
+def generate_multiscale_perturbation(delta, scales=[0.1, 0.3, 0.5], weights=[0.4, 0.3, 0.3]):
+    """
+    生成多尺度频域扰动：
+    - scales: 频带比例（0-1）
+    - weights: 各尺度扰动权重
+    """
+    delta_fft = torch.fft.fftn(delta, dim=(-2, -1))
+    perturb = torch.zeros_like(delta)
+    
+    for scale, weight in zip(scales, weights):
+        # 创建频域掩码
+        h, w = delta.shape[-2:]
+        mask = torch.zeros((h, w))
+        cx, cy = h//2, w//2
+        radius = int(min(h, w) * scale)
+        mask[cx-radius:cx+radius, cy-radius:cy+radius] = 1
+        
+        # 应用频域滤波
+        filtered_fft = delta_fft * mask
+        filtered = torch.fft.ifftn(filtered_fft).real
+        perturb += weight * filtered
+    
+    return perturb / sum(weights)
+    
+def adaptive_epsilon_mask(clean_differ, base_epsilon=0.1, sensitivity=1.5):
+    """
+    生成自适应扰动幅度掩码：
+    - 高差异区域（异常）允许更小扰动
+    - 低差异区域（正常）允许更大扰动
+    """
+    norm_differ = clean_differ / clean_differ.amax(dim=(1,2,3), keepdim=True)
+    epsilon_mask = base_epsilon * (1 + sensitivity * (1 - norm_differ))
+    return epsilon_mask.clamp(max=2*base_epsilon)
+
 def calculate_attack_impact(clean_df, attacked_df):
     """
     计算对抗攻击对异常检测的影响
