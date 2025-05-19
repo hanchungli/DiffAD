@@ -213,13 +213,17 @@ def tensor2allcsv(visuals, col_num, attack_delta=None):
     df['SR'] = [row for row in sr_data]
     df['LR'] = [row for row in lr_data]
     df['label'] = squeeze_tensor(visuals['label'])
-    
+  
+    # 计算差异数据（ORI - SR）
+    differ_data = ori_data - sr_data
+    differ_df = pd.DataFrame([row for row in differ_data])  # 转换为DataFrame
+
     # 若为对抗样本，记录扰动
     if attack_delta is not None:
         delta = squeeze_tensor(attack_delta.abs())
         df['delta_Linf'] = delta.max(axis=1)
         df['delta_L2'] = np.linalg.norm(delta, axis=1)
-    
+    sr_df = pd.DataFrame([row for row in sr_data])
     return df, sr_df, differ_df 
 
 
