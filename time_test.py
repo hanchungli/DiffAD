@@ -61,7 +61,10 @@ def time_test(params, strategy_params, temp_list):
     default_attack_params = {
       'epsilon': 0.1,      # 默认扰动幅度
       'alpha': 0.01,       # 默认单步更新步长
-      'iterations': 10     # 默认PGD迭代次数
+      'iterations': 10,     # 默认PGD迭代次数
+      'momentum_decay': 0.9,
+      'multiscale_weights': [0.4, 0.3, 0.3],  # 新增多尺度权重
+      'sensitivity': 1.5                       # 新增敏感度参数
     }
 
     # 获取用户配置的攻击参数（处理None情况）
@@ -83,7 +86,10 @@ def time_test(params, strategy_params, temp_list):
                 target_ori,
                 epsilon=attack_params['epsilon'],
                 alpha=attack_params['alpha'],
-                iterations=attack_params['iterations']
+                iterations=attack_params['iterations'],
+                momentum_decay=attack_params['momentum_decay'],
+                multiscale_weights=attack_params.get('multiscale_weights', None),
+                sensitivity=attack_params.get('sensitivity', 1.0)
             )
             diffusion.netG.eval()   # 恢复评估模式
             # 替换测试数据中的SR
