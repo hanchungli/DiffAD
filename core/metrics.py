@@ -220,7 +220,7 @@ def tensor2allcsv(visuals, col_num, attack_delta=None):
         df['delta_Linf'] = delta.max(axis=1)
         df['delta_L2'] = np.linalg.norm(delta, axis=1)
     
-    return df
+    return df, sr_df, differ_df 
 
 
 def merge_all_csv(all_datas, all_data):
