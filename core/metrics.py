@@ -21,7 +21,14 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     accumulated_grad = torch.zeros_like(adversarial_sr)     
     # 预计算原始差异（用于动态调整目标）
     with torch.no_grad():
-        clean_output = model.super_resolution(original_sr)
+        # 计算min和max
+        min_val = target_ori.min().item()
+        max_val = target_ori.max().item()
+        clean_output = model.super_resolution(original_sr,
+             min_num=target_ori.min().item(),
+             max_num=target_ori.max().item(),
+             continous=False
+             )
         clean_differ = (target_ori - clean_output).abs()       # [B, C, H, W]                 
     for _ in range(iterations):
         # 清零梯度
