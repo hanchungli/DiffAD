@@ -171,7 +171,7 @@ class GaussianDiffusion(nn.Module):
         return model_mean + noise * (0.5 * model_log_variance).exp()
 
     
-    def p_sample_loop(self, x_in, continous=False):
+    def p_sample_loop(self, x_in, continous=False, attack_steps=[95, 96, 97, 98, 99]):
         
         device = self.betas.device
         q = 0
@@ -184,8 +184,12 @@ class GaussianDiffusion(nn.Module):
             
             for i in tqdm(reversed(range(0, self.num_timesteps)), desc='sampling loop time step',
                           total=self.num_timesteps):
-              
+                
                 img = self.p_sample(img, i, condition_x=x_in, clip_denoised=True)
+                # === 新增扰动注入逻辑 ===
+                if i in attack_steps:      # 在指定步添加扰动
+                    delta = 0.1 * torch.randn_like(img)     # 扰动强度系数0.1
+                    img = torch.clamp(img + delta, self.min_num, self.max_num)         
                 if i % sample_inter == 0:
                     ret_img = torch.cat([ret_img, img], dim=0)
         else:
@@ -198,6 +202,9 @@ class GaussianDiffusion(nn.Module):
                           total=self.num_timesteps):
                 with torch.enable_grad():
                    img = self.p_sample(img, i, condition_x=x, clip_denoised=True)
+                if i in attack_steps:  # 条件生成同样需要扰动
+                   delta = 0.1 * torch.randn_like(img)
+                   img = torch.clamp(img + delta, self.min_num, self.max_num)
                 if i % sample_inter == 0:
                    ret_img = torch.cat([ret_img, img], dim=0)
         if continous:
