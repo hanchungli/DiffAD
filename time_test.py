@@ -118,11 +118,19 @@ def time_test(params, strategy_params, temp_list):
     attacked_f1 = Metrics.relabeling_strategy(attacked_all_datas, strategy_params)
     
     # 计算攻击指标
-    attack_metrics = Metrics.calculate_attack_impact(clean_all_datas, attacked_all_datas)
+    attack_metrics = Metrics.calculate_attack_impact(
+    clean_all_datas, 
+    attacked_all_datas,
+    attack_params=attack_params
+    )
     print(
-        f"[Attack Impact] Clean F1: {attack_metrics['clean_f1']:.4f} | "
-        f"Attacked F1: {attack_metrics['attacked_f1']:.4f} | "
-        f"F1 Drop Ratio: {attack_metrics['f1_drop_ratio'] * 100:.2f}%"
+        "\n[攻击效果总结]\n"
+        f"Clean F1: {attack_metrics['clean_f1']:.4f}\n"
+        f"Attacked F1: {attack_metrics['attacked_f1']:.4f}\n"
+        f"F1下降比例: {attack_metrics['f1_drop_ratio']*100:.2f}%\n"
+        f"Clean MSE: {attack_metrics['mse_clean']:.4f}\n"
+        f"Attacked MSE: {attack_metrics['mse_attacked']:.4f}\n"
+        f"攻击参数: {attack_metrics['attack_params']}"
     )
     
     # 可视化对比
