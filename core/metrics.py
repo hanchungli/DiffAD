@@ -134,7 +134,7 @@ def adaptive_epsilon_mask(clean_differ, base_epsilon=0.1, sensitivity=1.5):
     epsilon_mask = base_epsilon * (1 + sensitivity * (1 - norm_differ))
     return epsilon_mask.clamp(max=2*base_epsilon)
 
-def calculate_attack_impact(clean_df, attacked_df):
+def calculate_attack_impact(clean_df, attacked_df, attack_params=None):
     """
     计算对抗攻击对异常检测的影响
     :param clean_df: 原始测试结果DataFrame
@@ -149,11 +149,16 @@ def calculate_attack_impact(clean_df, attacked_df):
     
     # 计算下降比例
     drop_ratio = (clean_f1 - attacked_f1) / clean_f1
-    
+    # 计算MSE
+    mse_clean = mean_squared_error(clean_df['ORI'], clean_df['SR'])
+    mse_attacked = mean_squared_error(attacked_df['ORI'], attacked_df['SR']
     return {
         'clean_f1': clean_f1,
         'attacked_f1': attacked_f1,
-        'f1_drop_ratio': drop_ratio
+        'f1_drop_ratio': drop_ratio,
+        'mse_clean': mse_clean,
+        'mse_attacked': mse_attacked,
+        'attack_params': attack_params
     }
 
 def plot_attack_comparison(clean_data, attacked_data, index=0, save_dir='results/visualization'):
@@ -215,29 +220,33 @@ def tensor2allcsv(visuals, col_num, attack_delta=None):
     """将张量转换为包含完整时间序列的DataFrame"""
     df = pd.DataFrame()
     
-    # 提取各通道数据并转换为列表存储
-    ori_data = squeeze_tensor(visuals['ORI'])  # [B, T]
-    sr_data = squeeze_tensor(visuals['SR'])
-    lr_data = squeeze_tensor(visuals['LR'])
+    # 提取张量数据并转换为DataFrame
+    sr_df = pd.DataFrame(squeeze_tensor(visuals['SR']))
+    ori_df = pd.DataFrame(squeeze_tensor(visuals['ORI']))
+    lr_df = pd.DataFrame(squeeze_tensor(visuals['LR']))
+    inf_df = pd.DataFrame(squeeze_tensor(visuals['INF']))
     
-    # 按样本存储为时间序列列表
-    df['ORI'] = [row for row in ori_data]
-    df['SR'] = [row for row in sr_data]
-    df['LR'] = [row for row in lr_data]
+    # 裁剪多余列（确保ori_df和sr_df列数一致）
+    if col_num != 1:
+        for i in range(col_num, sr_df.shape[1]):
+            sr_df.drop(columns=i, axis=1, inplace=True)
+            ori_df.drop(columns=i, axis=1, inplace=True)
+            lr_df.drop(columns=i, axis=1, inplace=True)
+            inf_df.drop(columns=i, axis=1, inplace=True)
+    
+    # 计算各列均值（标量值）
+    df['SR'] = sr_df.mean(axis=1)
+    df['ORI'] = ori_df.mean(axis=1)
+    df['LR'] = lr_df.mean(axis=1)
+    df['INF'] = inf_df.mean(axis=1)
+    
+    # 计算差异均值（确保ori_df和sr_df维度一致）
+    df['differ'] = (ori_df - sr_df).abs().mean(axis=1) 
+    # 标签字段
     df['label'] = squeeze_tensor(visuals['label'])
-  
-    # 计算差异值（ORI - SR的均值）
-    df['differ'] = [(ori - sr).mean() for ori, sr in zip(ori_data, sr_data)]
     
-    # 对抗样本记录扰动
-    if attack_delta is not None:
-        delta = squeeze_tensor(attack_delta.abs())
-        df['delta_Linf'] = delta.max(axis=1).tolist()
-        df['delta_L2'] = np.linalg.norm(delta, axis=1).tolist()
-    
-    # 定义返回值（保持与调用方匹配）
-    sr_df = pd.DataFrame(sr_data.tolist())       # SR时间序列
-    differ_df = pd.DataFrame(ori_data - sr_data) # 完整差异序列
+    # 生成完整差异DataFrame
+    differ_df = ori_df - sr_df
     
     return df, sr_df, differ_df
 
