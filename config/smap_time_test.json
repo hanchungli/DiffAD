@@ -13,10 +13,10 @@
   },
   "attack_params": {
     "epsilon": 0.3,    
-    "alpha": 0.1,     
+    "alpha": 0.05,     
     "iterations": 5,     
     "momentum_decay": 0.9,
-    "multiscale_weights": [0.4, 0.3, 0.3],
+    "multiscale_weights": [0.1, 0.4, 0.5],
     "sensitivity": 1.5
   },
   "datasets": {
