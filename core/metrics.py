@@ -16,74 +16,61 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     :param iterations: 迭代次数
     :return: 对抗样本
     """
-    adversarial_sr = original_sr.clone().requires_grad_(True)   # 初始化时启用梯度
-    print(f"初始对抗样本梯度追踪状态: {adversarial_sr.requires_grad}")  # 应为True
-    accumulated_grad = torch.zeros_like(adversarial_sr)     
-    # 预计算原始差异（用于动态调整目标）
+    # 1. 归一化原始输入
+    x_norm, min_val, max_val = minmax_normalize(original_sr)
+    
+    # 2. 在归一化空间初始化对抗样本
+    adversarial_norm = x_norm.clone().requires_grad_(True)
+    accumulated_grad = torch.zeros_like(adversarial_norm)
+    
+    # 3. 预计算原始差异（基于归一化数据）
     with torch.no_grad():
-        # 计算min和max
-        min_val = target_ori.min().item()
-        max_val = target_ori.max().item()
-        clean_output = model.super_resolution(original_sr,
-             min_num=target_ori.min().item(),
-             max_num=target_ori.max().item(),
-             continous=False
-             )
-        clean_differ = (target_ori - clean_output).abs()       # [B, C, H, W]                 
+        clean_output = model.super_resolution(minmax_denormalize(x_norm, min_val, max_val))
+        clean_differ = (target_ori - clean_output).abs().mean(dim=1, keepdim=True)
+    
+    # 4. PGD攻击循环
     for _ in range(iterations):
-        # 清零梯度
-        adversarial_sr.grad = None
-        model.train()  # 切换模型为训练模式
-        # 前向计算
+        adversarial_norm.grad = None
+        
+        # 前向计算（注意反归一化输入模型）
         adv_output = model.super_resolution(
-            adversarial_sr, 
-            min_num=min_val, 
-            max_num=max_val
+            minmax_denormalize(adversarial_norm, min_val, max_val)
         )
         loss = adversarial_loss(adv_output, target_ori, clean_differ)
-        
-        # 反向传播获取梯度
         loss.backward()
-        grad = adversarial_sr.grad.data
-      
-        # 梯度归一化（改用L2范数）
-        grad_norm = grad / (grad.norm(p=2, dim=(1,2,3), keepdim=True) + 1e-8)
-
-        # === 动量累积 ===
+        
+        # 梯度动量计算
+        grad = adversarial_norm.grad.data
         accumulated_grad = momentum_decay * accumulated_grad + (1 - momentum_decay) * grad
         
-        # === 多尺度扰动生成 ===
+        # 多尺度扰动生成
         base_delta = alpha * accumulated_grad.sign()
         if multiscale_weights is not None:
-            multiscale_perturb = generate_multiscale_perturbation(
-                base_delta, 
-                scales=[0.1, 0.3, 0.5], 
-                weights=multiscale_weights
-            )
-            total_delta = base_delta + 0.3 * multiscale_perturb  # 比例可调
-        else:
-            total_delta = base_delta
+            base_delta += 0.3 * generate_multiscale_perturbation(base_delta, multiscale_weights)
         
-        # === 自适应约束应用 ===
-        current_epsilon = adaptive_epsilon_mask(
-            clean_differ, 
-            base_epsilon=epsilon, 
-            sensitivity=sensitivity
-        )  # [B, 1, 1, 1]
+        # 自适应扰动约束
+        current_epsilon = adaptive_epsilon_mask(clean_differ, epsilon, sensitivity)
+        perturbed_norm = adversarial_norm.data + base_delta
+        delta = torch.clamp(perturbed_norm - x_norm, -current_epsilon, current_epsilon)
         
-        # 扰动裁剪与更新
-        perturbed_data = adversarial_sr.data + total_delta
-        delta = torch.clamp(perturbed_data - original_sr.data,
-                           min=-current_epsilon, 
-                           max=current_epsilon)
-        adversarial_sr.data = original_sr.data + delta.detach()
-        adversarial_sr.data.clamp_(0, 1)
-        
-        # 日志输出
-        print(f"Iter {_+1}: Loss={loss.item():.2f} | Max Delta={delta.abs().max().item():.4f}")
+        # 更新并裁剪到[0,1]
+        adversarial_norm.data = torch.clamp(x_norm + delta, 0, 1)
     
-    return adversarial_sr.detach()
-    
+    # 5. 反归一化得到最终对抗样本
+    adversarial_sr = minmax_denormalize(adversarial_norm.detach(), min_val, max_val)
+    return adversarial_sr
+                            
+def minmax_normalize(x: torch.Tensor, eps=1e-8) -> tuple:
+    """最大最小归一化到[0,1]范围"""
+    min_val = x.min(dim=-1, keepdim=True)[0].min(dim=-2, keepdim=True)[0]  # [B,C,1,1]
+    max_val = x.max(dim=-1, keepdim=True)[0].max(dim=-2, keepdim=True)[0]
+    x_norm = (x - min_val) / (max_val - min_val + eps)
+    return x_norm, min_val, max_val
+
+def minmax_denormalize(x_norm: torch.Tensor, min_val: torch.Tensor, max_val: torch.Tensor) -> torch.Tensor:
+    """从[0,1]范围反归一化到原始尺度"""
+    return x_norm * (max_val - min_val) + min_val 
+  
 def adversarial_loss(model_output, target_ori, clean_differ, lambda_anomaly=0.7):
     """
     组合损失函数：
