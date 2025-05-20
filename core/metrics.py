@@ -16,6 +16,9 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     :param iterations: 迭代次数
     :return: 对抗样本
     """
+    # 记录原始数据范围
+    raw_min = original_sr.min().item()
+    raw_max = original_sr.max().item()                      
     # 1. 归一化原始输入
     x_norm, min_val, max_val = minmax_normalize(original_sr)
     
@@ -25,7 +28,11 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
     
     # 3. 预计算原始差异（基于归一化数据）
     with torch.no_grad():
-        clean_output = model.super_resolution(minmax_denormalize(x_norm, min_val, max_val))
+        clean_output = model.super_resolution(
+            minmax_denormalize(x_norm, min_val, max_val),
+            min_num=raw_min, 
+            max_num=raw_max
+        )
         clean_differ = (target_ori - clean_output).abs().mean(dim=1, keepdim=True)
     
     # 4. PGD攻击循环
@@ -34,7 +41,9 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         
         # 前向计算（注意反归一化输入模型）
         adv_output = model.super_resolution(
-            minmax_denormalize(adversarial_norm, min_val, max_val)
+            minmax_denormalize(adversarial_norm, min_val, max_val),
+            min_num=raw_min,
+            max_num=raw_max
         )
         loss = adversarial_loss(adv_output, target_ori, clean_differ)
         loss.backward()
