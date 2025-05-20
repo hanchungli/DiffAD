@@ -11,6 +11,14 @@
     "checkpoint": "checkpoint",
     "resume_state": "experiments/MSL_TRAIN_8_128_100/checkpoint/E100"
   },
+  "attack_params": {
+    "epsilon": 0.3,    
+    "alpha": 0.05,     
+    "iterations": 5,     
+    "momentum_decay": 0.9,
+    "multiscale_weights": [0.1, 0.4, 0.5],
+    "sensitivity": 1.5
+  },
   "datasets": {
     "test": {
       "name": "msl_test",
