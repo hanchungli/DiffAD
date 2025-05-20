@@ -45,6 +45,9 @@ def generate_adversarial_pgd(model, original_sr, target_ori, epsilon, alpha, ite
         # 反向传播获取梯度
         loss.backward()
         grad = adversarial_sr.grad.data
+      
+        # 梯度归一化（改用L2范数）
+        grad_norm = grad / (grad.norm(p=2, dim=(1,2,3), keepdim=True) + 1e-8)
 
         # === 动量累积 ===
         accumulated_grad = momentum_decay * accumulated_grad + (1 - momentum_decay) * grad
