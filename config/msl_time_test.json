@@ -9,7 +9,7 @@
     "tb_logger": "tb_logger",
     "results": "results",
     "checkpoint": "checkpoint",
-    "resume_state": "experiments/MSL_TRAIN_8_128_100/checkpoint/E100"
+    "resume_state": "experiments/MSL_TRAIN_16_128_100/checkpoint/E100"
   },
   "attack_params": {
     "epsilon": 0.3,    
