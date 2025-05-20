@@ -154,7 +154,7 @@ def calculate_attack_impact(clean_df, attacked_df, attack_params=None):
     drop_ratio = (clean_f1 - attacked_f1) / clean_f1
     # 计算MSE
     mse_clean = mean_squared_error(clean_df['ORI'], clean_df['SR'])
-    mse_attacked = mean_squared_error(attacked_df['ORI'], attacked_df['SR']
+    mse_attacked = mean_squared_error(attacked_df['ORI'], attacked_df['SR']）
     return {
         'clean_f1': clean_f1,
         'attacked_f1': attacked_f1,
