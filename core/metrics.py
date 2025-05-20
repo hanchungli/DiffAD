@@ -80,7 +80,7 @@ def minmax_denormalize(x_norm: torch.Tensor, min_val: torch.Tensor, max_val: tor
     """从[0,1]范围反归一化到原始尺度"""
     return x_norm * (max_val - min_val) + min_val 
   
-def adversarial_loss(model_output, target_ori, clean_differ, lambda_anomaly=0.7):
+def adversarial_loss(model_output, target_ori, clean_differ, lambda_anomaly=2.0):
     """
     组合损失函数：
     - 正常区域：最大化重构误差
