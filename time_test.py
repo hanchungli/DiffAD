@@ -133,8 +133,6 @@ def time_test(params, strategy_params, temp_list):
         f"攻击参数: {attack_metrics['attack_params']}"
     )
     
-    # 可视化对比
-    Metrics.plot_attack_comparison(clean_all_datas, attacked_all_datas, index=0)
     
     # 打印最终结果
     temp_f1 = Decimal(attacked_f1).quantize(Decimal("0.0000"))
