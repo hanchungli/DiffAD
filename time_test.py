@@ -11,7 +11,7 @@ import core.metrics as Metrics
 import data as Data
 import model as Model
 from decimal import Decimal
-import matplotlib.pyplot as plt
+
 
 
 
@@ -39,21 +39,10 @@ def time_test(params, strategy_params, temp_list):
         opt['model']['beta_schedule'][opt['phase']], schedule_phase=opt['phase'])
 
     logger.info('Begin Model Evaluation.')
-    # ========================================================
-    # 1. 运行正常测试（无攻击）
-    # ========================================================
-    logger.info('Running clean evaluation (no attack)...')
-    clean_all_datas = pd.DataFrame()
-    with torch.no_grad():
-        for _, test_data in enumerate(test_loader):
-            diffusion.feed_data(test_data)
-            diffusion.test(continous=False)
-            visuals = diffusion.get_current_visuals()
-            all_data, sr_data, differ_data = Metrics.tensor2allcsv(visuals, params['col_num'])
-            clean_all_datas = Metrics.merge_all_csv(clean_all_datas, all_data)
+   
 
     # ========================================================
-    # 2. 运行对抗攻击测试
+    # 1. 运行对抗攻击测试
     # ========================================================
     logger.info('Running adversarial evaluation...')
     attacked_all_datas = pd.DataFrame()
@@ -106,7 +95,7 @@ def time_test(params, strategy_params, temp_list):
             attacked_all_datas = Metrics.merge_all_csv(attacked_all_datas, all_data)
 
     # ========================================================
-    # 3. 后处理与评估
+    # 2. 后处理与评估
     # ========================================================
     # 截断冗余数据
     for df in [clean_all_datas, attacked_all_datas]:
@@ -125,11 +114,6 @@ def time_test(params, strategy_params, temp_list):
     )
     print(
         "\n[攻击效果总结]\n"
-        f"Clean F1: {attack_metrics['clean_f1']:.4f}\n"
-        f"Attacked F1: {attack_metrics['attacked_f1']:.4f}\n"
-        f"F1下降比例: {attack_metrics['f1_drop_ratio']*100:.2f}%\n"
-        f"Clean MSE: {attack_metrics['mse_clean']:.4f}\n"
-        f"Attacked MSE: {attack_metrics['mse_attacked']:.4f}\n"
         f"攻击参数: {attack_metrics['attack_params']}"
     )
     
