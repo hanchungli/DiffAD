@@ -137,7 +137,7 @@ def calculate_attack_impact(clean_df, attacked_df, attack_params=None):
     """
     计算对抗攻击对异常检测的影响
     :param clean_df: 原始测试结果DataFrame
-    :param attacked_df: 对抗攻击后的测试结果DataFrameAdd comment更多操作
+    :param attacked_df: 对抗攻击后的测试结果
     :return: 攻击指标字典（F1下降比例、误报率变化等）
     """
     # 计算原始F1
