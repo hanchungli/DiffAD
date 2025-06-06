@@ -125,11 +125,7 @@ def time_test(params, strategy_params, temp_list):
     )
     print(
         "\n[攻击效果总结]\n"
-        f"Clean F1: {attack_metrics['clean_f1']:.4f}\n"
-        f"Attacked F1: {attack_metrics['attacked_f1']:.4f}\n"
-        f"F1下降比例: {attack_metrics['f1_drop_ratio']*100:.2f}%\n"
-        f"Clean MSE: {attack_metrics['mse_clean']:.4f}\n"
-        f"Attacked MSE: {attack_metrics['mse_attacked']:.4f}\n"
+       
         f"攻击参数: {attack_metrics['attack_params']}"
     )
     
